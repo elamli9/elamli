@@ -4,21 +4,22 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ShoppingCart, ArrowRight, Package, Shield, Zap } from 'lucide-react';
 
-// Firebase Configuration
+// إعدادات Firebase
 const firebaseConfig = {
-    apiKey: "AIzaSyC3ENJExu01i7yODhQQO5k6-BuZ13737T4",
-    authDomain: "elamli-shop.firebaseapp.com",
-    projectId: "elamli-shop",
-    storageBucket: "elamli-shop.appspot.com",
-    messagingSenderId: "740777134694",
-    appId: "1:740777134694:web:6064048d820d18540afba7",
-    measurementId: "G-MNT2CS1QSD"
+  apiKey: "AIzaSyC3ENJExu01i7yODhQQO5k6-BuZ13737T4",
+  authDomain: "elamli-shop.firebaseapp.com",
+  projectId: "elamli-shop",
+  storageBucket: "elamli-shop.appspot.com",
+  messagingSenderId: "740777134694",
+  appId: "1:740777134694:web:6064048d820d18540afba7",
+  measurementId: "G-MNT2CS1QSD"
 };
 
-// Initialize Firebase
+// تهيئة Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// تعريف الأنواع
 interface Product {
   id: string;
   name: string;
@@ -44,9 +45,10 @@ interface Order {
   productPrice: number | string;
   customerDetails: OrderDetails;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
-  createdAt: any; // Firebase Timestamp
+  createdAt: any;
 }
 
+// الرسوم المتحركة
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
@@ -61,6 +63,7 @@ const staggerContainer = {
   }
 };
 
+// تنسيق السعر
 function formatPrice(price: number | string): string {
   const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
   return !isNaN(numericPrice) ? numericPrice.toFixed(2) : '0.00';
@@ -81,7 +84,10 @@ function App() {
     notes: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(''); // البحث
+  const [shareMessage, setShareMessage] = useState<string>(''); // رسالة المشاركة
 
+  // جلب المنتجات مع التعامل مع معرف المنتج في URL
   useEffect(() => {
     async function fetchProducts() {
       try {
@@ -99,31 +105,10 @@ function App() {
             specifications: Array.isArray(data.specifications) ? data.specifications : []
           };
         });
+
         setProducts(productsData);
         setLoading(false);
-      } catch (err) {
-        console.error("Error fetching products:", err);
-        setError("فشل في تحميل المنتجات. يرجى المحاولة مرة أخرى لاحقًا.");
-        setLoading(false);
-      }
-    }
 
-    fetchProducts();
-  }, []);
-
-  useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const querySnapshot = await getDocs(collection(db, "products"));
-        const productsData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Product[];
-  
-        setProducts(productsData);
-        setLoading(false);
-  
-        // Check if there's a product ID in the URL
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get("product");
         if (productId) {
@@ -132,22 +117,27 @@ function App() {
             setSelectedProduct(foundProduct);
           }
         }
-  
       } catch (err) {
-        console.error("Error fetching products:", err);
+        console.error("خطأ في جلب المنتجات:", err);
         setError("فشل في تحميل المنتجات. يرجى المحاولة مرة أخرى لاحقًا.");
         setLoading(false);
       }
     }
-  
+
     fetchProducts();
   }, []);
-  
+
+  // تحديث الصورة المختارة عند اختيار منتج
   useEffect(() => {
     if (selectedProduct) {
       setSelectedImage(selectedProduct.imageUrl);
     }
   }, [selectedProduct]);
+
+  // تصفية المنتجات بناءً على البحث
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
@@ -162,13 +152,22 @@ function App() {
     setShowCheckout(true);
   };
 
+  // تقديم الطلب مع التحقق من البيانات
   const handleOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!selectedProduct) return;
-    
+
+    // التحقق من البيانات
+    if (!orderDetails.phone.match(/^\+?\d{9,15}$/)) {
+      alert('يرجى إدخال رقم هاتف صحيح');
+      return;
+    }
+    if (!orderDetails.fullName.trim() || !orderDetails.address.trim() || !orderDetails.city.trim()) {
+      alert('يرجى ملء جميع الحقول المطلوبة');
+      return;
+    }
+
     setSubmitting(true);
-    
     try {
       const order: Order = {
         productId: selectedProduct.id,
@@ -180,22 +179,12 @@ function App() {
       };
 
       await addDoc(collection(db, "orders"), order);
-      
       alert('تم استلام طلبك بنجاح! سنتصل بك قريباً لتأكيد الطلب.');
-      
-      // Reset form
-      setOrderDetails({
-        fullName: '',
-        phone: '',
-        address: '',
-        city: '',
-        notes: ''
-      });
-      
+      setOrderDetails({ fullName: '', phone: '', address: '', city: '', notes: '' });
       setShowCheckout(false);
       setSelectedProduct(null);
     } catch (err) {
-      console.error("Error submitting order:", err);
+      console.error("خطأ في تقديم الطلب:", err);
       alert('عذراً، حدث خطأ أثناء تقديم الطلب. يرجى المحاولة مرة أخرى.');
     } finally {
       setSubmitting(false);
@@ -206,10 +195,32 @@ function App() {
     setSelectedProduct(null);
     setShowCheckout(false);
   };
-  const handleShareProduct = (product: Product) => {
+
+  // مشاركة المنتج مع تحسينات
+  const handleShareProduct = async (product: Product) => {
     const productUrl = `${window.location.origin}/?product=${product.id}`;
-    navigator.clipboard.writeText(productUrl);
-    alert("تم نسخ رابط المنتج! يمكنك مشاركته الآن.");
+    const shareData = {
+      title: product.name,
+      text: `اطلع على هذا المنتج: ${product.name} - ${product.description}`,
+      url: productUrl,
+    };
+
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        setShareMessage("تمت المشاركة بنجاح!");
+      } catch (err) {
+        setShareMessage("فشل في المشاركة، حاول مرة أخرى.");
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(productUrl);
+        setShareMessage("تم نسخ رابط المنتج بنجاح!");
+      } catch (err) {
+        setShareMessage("فشل في نسخ الرابط، حاول مرة أخرى.");
+      }
+    }
+    setTimeout(() => setShareMessage(''), 3000); // إخفاء الرسالة بعد 3 ثوانٍ
   };
 
   if (selectedProduct) {
@@ -315,24 +326,32 @@ function App() {
                       )}
                     </motion.div>
                     <motion.button 
-  onClick={() => handleShareProduct(selectedProduct)}
-  className="btn btn-outline w-full mt-4 flex items-center justify-center gap-2"
-  whileHover={{ scale: 1.05 }}
-  whileTap={{ scale: 0.95 }}
->
-  <Zap className="w-5 h-5" />
-  <span>مشاركة المنتج</span>
-</motion.button>
-
+                      onClick={() => handleShareProduct(selectedProduct)}
+                      className="btn btn-outline w-full mt-4 flex items-center justify-center gap-2"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Zap className="w-5 h-5" />
+                      <span>مشاركة المنتج</span>
+                    </motion.button>
+                    {shareMessage && (
+                      <motion.div 
+                        className={`mt-2 text-center ${shareMessage.includes('فشل') ? 'text-red-600' : 'text-green-600'}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        {shareMessage}
+                      </motion.div>
+                    )}
                     <motion.button
                       onClick={handleBuyNow}
-                      className="btn btn-primary w-full"
+                      className="btn btn-primary w-full mt-4"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
                       اطلب الآن
                     </motion.button>
-                    
                   </div>
                 </div>
               </motion.div>
@@ -351,7 +370,7 @@ function App() {
                     <input
                       type="text"
                       required
-                      className="input"
+                      className="input w-full border rounded p-2"
                       value={orderDetails.fullName}
                       onChange={(e) => setOrderDetails({...orderDetails, fullName: e.target.value})}
                     />
@@ -361,7 +380,7 @@ function App() {
                     <input
                       type="tel"
                       required
-                      className="input"
+                      className="input w-full border rounded p-2"
                       value={orderDetails.phone}
                       onChange={(e) => setOrderDetails({...orderDetails, phone: e.target.value})}
                     />
@@ -371,7 +390,7 @@ function App() {
                     <input
                       type="text"
                       required
-                      className="input"
+                      className="input w-full border rounded p-2"
                       value={orderDetails.address}
                       onChange={(e) => setOrderDetails({...orderDetails, address: e.target.value})}
                     />
@@ -381,7 +400,7 @@ function App() {
                     <input
                       type="text"
                       required
-                      className="input"
+                      className="input w-full border rounded p-2"
                       value={orderDetails.city}
                       onChange={(e) => setOrderDetails({...orderDetails, city: e.target.value})}
                     />
@@ -389,7 +408,7 @@ function App() {
                   <div>
                     <label className="block text-gray-700 mb-2">ملاحظات إضافية</label>
                     <textarea
-                      className="input"
+                      className="input w-full border rounded p-2"
                       rows={3}
                       value={orderDetails.notes}
                       onChange={(e) => setOrderDetails({...orderDetails, notes: e.target.value})}
@@ -429,7 +448,9 @@ function App() {
               <input
                 type="text"
                 placeholder="ابحث عن الإكسسوارات..."
-                className="input"
+                className="input w-full border rounded p-2"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <motion.div 
@@ -469,15 +490,15 @@ function App() {
         )}
 
         <motion.div 
-          className="product-grid"
+          className="product-grid grid grid-cols-1 md:grid-cols-3 gap-6"
           variants={staggerContainer}
           initial="initial"
           animate="animate"
         >
-          {products.map(product => (
+          {filteredProducts.map(product => (
             <motion.div 
               key={product.id} 
-              className="card group cursor-pointer"
+              className="card bg-white shadow-md rounded-lg overflow-hidden"
               onClick={() => handleProductClick(product)}
               variants={fadeIn}
               whileHover={{ y: -5 }}
@@ -505,30 +526,21 @@ function App() {
             initial="initial"
             animate="animate"
           >
-            <motion.div 
-              className="text-center"
-              variants={fadeIn}
-            >
+            <motion.div className="text-center" variants={fadeIn}>
               <div className="flex justify-center mb-4">
                 <Package className="w-12 h-12 text-brand-500" />
               </div>
               <h3 className="text-xl font-semibold mb-2">الدفع عند الاستلام</h3>
               <p className="text-gray-600">ادفع عند استلام طلبك</p>
             </motion.div>
-            <motion.div 
-              className="text-center"
-              variants={fadeIn}
-            >
+            <motion.div className="text-center" variants={fadeIn}>
               <div className="flex justify-center mb-4">
                 <Zap className="w-12 h-12 text-brand-500" />
               </div>
               <h3 className="text-xl font-semibold mb-2">توصيل خلال ٢٤ ساعة</h3>
               <p className="text-gray-600">شحن سريع إلى باب منزلك</p>
             </motion.div>
-            <motion.div 
-              className="text-center"
-              variants={fadeIn}
-            >
+            <motion.div className="text-center" variants={fadeIn}>
               <div className="flex justify-center mb-4">
                 <Shield className="w-12 h-12 text-brand-500" />
               </div>
@@ -555,7 +567,7 @@ function App() {
               <h3 className="text-xl font-semibold mb-4">اتصل بنا</h3>
               <ul className="space-y-2">
                 <li>elamli.support@gmail.com</li>
-                <li>212640987767+</li>
+                <li>+212640987767</li>
                 <li>شارع الجزائر, تطوان</li>
               </ul>
             </div>
