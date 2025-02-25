@@ -112,6 +112,38 @@ function App() {
   }, []);
 
   useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const querySnapshot = await getDocs(collection(db, "products"));
+        const productsData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Product[];
+  
+        setProducts(productsData);
+        setLoading(false);
+  
+        // Check if there's a product ID in the URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get("product");
+        if (productId) {
+          const foundProduct = productsData.find(p => p.id === productId);
+          if (foundProduct) {
+            setSelectedProduct(foundProduct);
+          }
+        }
+  
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        setError("فشل في تحميل المنتجات. يرجى المحاولة مرة أخرى لاحقًا.");
+        setLoading(false);
+      }
+    }
+  
+    fetchProducts();
+  }, []);
+  
+  useEffect(() => {
     if (selectedProduct) {
       setSelectedImage(selectedProduct.imageUrl);
     }
@@ -173,6 +205,11 @@ function App() {
   const handleBackToProducts = () => {
     setSelectedProduct(null);
     setShowCheckout(false);
+  };
+  const handleShareProduct = (product: Product) => {
+    const productUrl = `${window.location.origin}/?product=${product.id}`;
+    navigator.clipboard.writeText(productUrl);
+    alert("تم نسخ رابط المنتج! يمكنك مشاركته الآن.");
   };
 
   if (selectedProduct) {
@@ -277,6 +314,16 @@ function App() {
                         </div>
                       )}
                     </motion.div>
+                    <motion.button 
+  onClick={() => handleShareProduct(selectedProduct)}
+  className="btn btn-outline w-full mt-4 flex items-center justify-center gap-2"
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+>
+  <Zap className="w-5 h-5" />
+  <span>مشاركة المنتج</span>
+</motion.button>
+
                     <motion.button
                       onClick={handleBuyNow}
                       className="btn btn-primary w-full"
@@ -285,6 +332,7 @@ function App() {
                     >
                       اطلب الآن
                     </motion.button>
+                    
                   </div>
                 </div>
               </motion.div>
