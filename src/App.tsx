@@ -2,23 +2,24 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ShoppingCart, ArrowRight, Package, Shield, Zap } from 'lucide-react';
+import { ArrowRight, Package, Shield, Zap, Moon, Sun } from 'lucide-react';
 
-// Firebase Configuration
+// إعدادات Firebase
 const firebaseConfig = {
-    apiKey: "AIzaSyC3ENJExu01i7yODhQQO5k6-BuZ13737T4",
-    authDomain: "elamli-shop.firebaseapp.com",
-    projectId: "elamli-shop",
-    storageBucket: "elamli-shop.appspot.com",
-    messagingSenderId: "740777134694",
-    appId: "1:740777134694:web:6064048d820d18540afba7",
-    measurementId: "G-MNT2CS1QSD"
+  apiKey: "AIzaSyC3ENJExu01i7yODhQQO5k6-BuZ13737T4",
+  authDomain: "elamli-shop.firebaseapp.com",
+  projectId: "elamli-shop",
+  storageBucket: "elamli-shop.appspot.com",
+  messagingSenderId: "740777134694",
+  appId: "1:740777134694:web:6064048d820d18540afba7",
+  measurementId: "G-MNT2CS1QSD"
 };
 
-// Initialize Firebase
+// تهيئة Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// تعريف الأنواع
 interface Product {
   id: string;
   name: string;
@@ -44,9 +45,10 @@ interface Order {
   productPrice: number | string;
   customerDetails: OrderDetails;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
-  createdAt: any; // Firebase Timestamp
+  createdAt: any;
 }
 
+// الرسوم المتحركة
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
@@ -61,6 +63,7 @@ const staggerContainer = {
   }
 };
 
+// تنسيق السعر
 function formatPrice(price: number | string): string {
   const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
   return !isNaN(numericPrice) ? numericPrice.toFixed(2) : '0.00';
@@ -81,7 +84,11 @@ function App() {
     notes: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [shareMessage, setShareMessage] = useState<string>('');
+  const [isDarkMode, setIsDarkMode] = useState(false); // حالة الوضع المظلم
 
+  // جلب المنتجات
   useEffect(() => {
     async function fetchProducts() {
       try {
@@ -99,31 +106,10 @@ function App() {
             specifications: Array.isArray(data.specifications) ? data.specifications : []
           };
         });
+
         setProducts(productsData);
         setLoading(false);
-      } catch (err) {
-        console.error("Error fetching products:", err);
-        setError("فشل في تحميل المنتجات. يرجى المحاولة مرة أخرى لاحقًا.");
-        setLoading(false);
-      }
-    }
 
-    fetchProducts();
-  }, []);
-
-  useEffect(() => {
-    async function fetchProducts() {
-      try {
-        const querySnapshot = await getDocs(collection(db, "products"));
-        const productsData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Product[];
-  
-        setProducts(productsData);
-        setLoading(false);
-  
-        // Check if there's a product ID in the URL
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get("product");
         if (productId) {
@@ -132,22 +118,32 @@ function App() {
             setSelectedProduct(foundProduct);
           }
         }
-  
       } catch (err) {
-        console.error("Error fetching products:", err);
+        console.error("خطأ في جلب المنتجات:", err);
         setError("فشل في تحميل المنتجات. يرجى المحاولة مرة أخرى لاحقًا.");
         setLoading(false);
       }
     }
-  
+
     fetchProducts();
   }, []);
-  
+
+  // تحديث الصورة المختارة
   useEffect(() => {
     if (selectedProduct) {
       setSelectedImage(selectedProduct.imageUrl);
     }
   }, [selectedProduct]);
+
+  // تصفية المنتجات بناءً على البحث
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // تبديل الوضع المظلم/الفاتح
+  const toggleDarkMode = () => {
+    setIsDarkMode(prev => !prev);
+  };
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
@@ -164,11 +160,18 @@ function App() {
 
   const handleOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!selectedProduct) return;
-    
+
+    if (!orderDetails.phone.match(/^\+?\d{9,15}$/)) {
+      alert('يرجى إدخال رقم هاتف صحيح');
+      return;
+    }
+    if (!orderDetails.fullName.trim() || !orderDetails.address.trim() || !orderDetails.city.trim()) {
+      alert('يرجى ملء جميع الحقول المطلوبة');
+      return;
+    }
+
     setSubmitting(true);
-    
     try {
       const order: Order = {
         productId: selectedProduct.id,
@@ -180,22 +183,12 @@ function App() {
       };
 
       await addDoc(collection(db, "orders"), order);
-      
       alert('تم استلام طلبك بنجاح! سنتصل بك قريباً لتأكيد الطلب.');
-      
-      // Reset form
-      setOrderDetails({
-        fullName: '',
-        phone: '',
-        address: '',
-        city: '',
-        notes: ''
-      });
-      
+      setOrderDetails({ fullName: '', phone: '', address: '', city: '', notes: '' });
       setShowCheckout(false);
       setSelectedProduct(null);
     } catch (err) {
-      console.error("Error submitting order:", err);
+      console.error("خطأ في تقديم الطلب:", err);
       alert('عذراً، حدث خطأ أثناء تقديم الطلب. يرجى المحاولة مرة أخرى.');
     } finally {
       setSubmitting(false);
@@ -206,22 +199,48 @@ function App() {
     setSelectedProduct(null);
     setShowCheckout(false);
   };
-  const handleShareProduct = (product: Product) => {
+
+  const handleShareProduct = async (product: Product) => {
     const productUrl = `${window.location.origin}/?product=${product.id}`;
-    navigator.clipboard.writeText(productUrl);
-    alert("تم نسخ رابط المنتج! يمكنك مشاركته الآن.");
+    const shareData = {
+      title: product.name,
+      text: `اطلع على هذا المنتج: ${product.name} - ${product.description}`,
+      url: productUrl,
+    };
+
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        setShareMessage("تمت المشاركة بنجاح!");
+      } catch (err) {
+        setShareMessage("فشل في المشاركة، حاول مرة أخرى.");
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(productUrl);
+        setShareMessage("تم نسخ رابط المنتج بنجاح!");
+      } catch (err) {
+        setShareMessage("فشل في نسخ الرابط، حاول مرة أخرى.");
+      }
+    }
+    setTimeout(() => setShareMessage(''), 3000);
   };
+
+  // كائن الأنماط الديناميكية بناءً على الوضع
+  const themeClasses = isDarkMode
+    ? 'bg-gray-900 text-white'
+    : 'bg-gray-50 text-gray-900';
 
   if (selectedProduct) {
     const allImages = [selectedProduct.imageUrl, ...(selectedProduct.additionalImages || [])];
 
     return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow-sm">
+      <div className={`min-h-screen ${themeClasses}`}>
+        <header className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
           <div className="container mx-auto px-4 py-4">
             <motion.button 
               onClick={handleBackToProducts}
-              className="text-brand-600 hover:text-brand-800 flex items-center gap-2"
+              className={`${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-brand-600 hover:text-brand-800'} flex items-center gap-2`}
               whileHover={{ x: -5 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -235,7 +254,7 @@ function App() {
           <AnimatePresence mode="wait">
             {!showCheckout ? (
               <motion.div 
-                className="bg-white rounded-xl shadow-lg p-8"
+                className={`${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} rounded-xl shadow-lg p-8`}
                 initial="initial"
                 animate="animate"
                 exit="exit"
@@ -291,7 +310,7 @@ function App() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2 }}
                     >
-                      <p className="text-gray-600 leading-relaxed mb-4">
+                      <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} leading-relaxed mb-4`}>
                         {selectedProduct.description}
                       </p>
                       {selectedProduct.details && selectedProduct.details.length > 0 && (
@@ -301,7 +320,7 @@ function App() {
                             {selectedProduct.details.map((detail, index) => (
                               <motion.li 
                                 key={index} 
-                                className="text-gray-600 flex items-center gap-2"
+                                className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} flex items-center gap-2`}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.3 + index * 0.1 }}
@@ -315,30 +334,38 @@ function App() {
                       )}
                     </motion.div>
                     <motion.button 
-  onClick={() => handleShareProduct(selectedProduct)}
-  className="btn btn-outline w-full mt-4 flex items-center justify-center gap-2"
-  whileHover={{ scale: 1.05 }}
-  whileTap={{ scale: 0.95 }}
->
-  <Zap className="w-5 h-5" />
-  <span>مشاركة المنتج</span>
-</motion.button>
-
+                      onClick={() => handleShareProduct(selectedProduct)}
+                      className={`${isDarkMode ? 'border-gray-300 text-gray-300 hover:bg-gray-700' : 'border-gray-600 text-gray-600 hover:bg-gray-100'} btn btn-outline w-full mt-4 flex items-center justify-center gap-2 border`}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Zap className="w-5 h-5" />
+                      <span>مشاركة المنتج</span>
+                    </motion.button>
+                    {shareMessage && (
+                      <motion.div 
+                        className={`mt-2 text-center ${shareMessage.includes('فشل') ? 'text-red-600' : 'text-green-600'}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        {shareMessage}
+                      </motion.div>
+                    )}
                     <motion.button
                       onClick={handleBuyNow}
-                      className="btn btn-primary w-full"
+                      className={`${isDarkMode ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-600 hover:bg-blue-700'} btn btn-primary w-full mt-4 text-white p-2 rounded`}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
                       اطلب الآن
                     </motion.button>
-                    
                   </div>
                 </div>
               </motion.div>
             ) : (
               <motion.div 
-                className="bg-white rounded-xl shadow-lg p-8"
+                className={`${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} rounded-xl shadow-lg p-8`}
                 initial="initial"
                 animate="animate"
                 exit="exit"
@@ -347,49 +374,49 @@ function App() {
                 <h2 className="text-2xl font-bold mb-6">تفاصيل الطلب</h2>
                 <form onSubmit={handleOrderSubmit} className="space-y-6">
                   <div>
-                    <label className="block text-gray-700 mb-2">الاسم الكامل</label>
+                    <label className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'} block mb-2`}>الاسم الكامل</label>
                     <input
                       type="text"
                       required
-                      className="input"
+                      className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} input w-full border rounded p-2`}
                       value={orderDetails.fullName}
                       onChange={(e) => setOrderDetails({...orderDetails, fullName: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-700 mb-2">رقم الجوال</label>
+                    <label className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'} block mb-2`}>رقم الجوال</label>
                     <input
                       type="tel"
                       required
-                      className="input"
+                      className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} input w-full border rounded p-2`}
                       value={orderDetails.phone}
                       onChange={(e) => setOrderDetails({...orderDetails, phone: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-700 mb-2">العنوان</label>
+                    <label className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'} block mb-2`}>العنوان</label>
                     <input
                       type="text"
                       required
-                      className="input"
+                      className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} input w-full border rounded p-2`}
                       value={orderDetails.address}
                       onChange={(e) => setOrderDetails({...orderDetails, address: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-700 mb-2">المدينة</label>
+                    <label className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'} block mb-2`}>المدينة</label>
                     <input
                       type="text"
                       required
-                      className="input"
+                      className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} input w-full border rounded p-2`}
                       value={orderDetails.city}
                       onChange={(e) => setOrderDetails({...orderDetails, city: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="block text-gray-700 mb-2">ملاحظات إضافية</label>
+                    <label className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'} block mb-2`}>ملاحظات إضافية</label>
                     <textarea
-                      className="input"
+                      className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} input w-full border rounded p-2`}
                       rows={3}
                       value={orderDetails.notes}
                       onChange={(e) => setOrderDetails({...orderDetails, notes: e.target.value})}
@@ -398,7 +425,7 @@ function App() {
                   <motion.button
                     type="submit"
                     disabled={submitting}
-                    className={`btn btn-primary w-full ${submitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    className={`${isDarkMode ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-600 hover:bg-blue-700'} btn btn-primary w-full text-white p-2 rounded ${submitting ? 'opacity-70 cursor-not-allowed' : ''}`}
                     whileHover={submitting ? {} : { scale: 1.02 }}
                     whileTap={submitting ? {} : { scale: 0.98 }}
                   >
@@ -414,8 +441,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm sticky top-0 z-50">
+    <div className={`min-h-screen ${themeClasses}`}>
+      <header className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm sticky top-0 z-50`}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <motion.div 
@@ -429,15 +456,22 @@ function App() {
               <input
                 type="text"
                 placeholder="ابحث عن الإكسسوارات..."
-                className="input"
+                className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-300'} input w-full border rounded p-2`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <motion.div 
               className="relative cursor-pointer"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
+              onClick={toggleDarkMode}
             >
-              <ShoppingCart className="w-6 h-6 text-brand-600" />
+              {isDarkMode ? (
+                <Sun className="w-6 h-6 text-yellow-400" />
+              ) : (
+                <Moon className="w-6 h-6 text-gray-600" />
+              )}
             </motion.div>
           </div>
         </div>
@@ -454,7 +488,7 @@ function App() {
         
         {loading && (
           <div className="text-center py-8">
-            <div className="text-lg text-gray-600">جاري التحميل...</div>
+            <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} text-lg`}>جاري التحميل...</div>
           </div>
         )}
 
@@ -469,15 +503,15 @@ function App() {
         )}
 
         <motion.div 
-          className="product-grid"
+          className="product-grid grid grid-cols-1 md:grid-cols-3 gap-6"
           variants={staggerContainer}
           initial="initial"
           animate="animate"
         >
-          {products.map(product => (
+          {filteredProducts.map(product => (
             <motion.div 
               key={product.id} 
-              className="card group cursor-pointer"
+              className={`${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} card shadow-md rounded-lg overflow-hidden`}
               onClick={() => handleProductClick(product)}
               variants={fadeIn}
               whileHover={{ y: -5 }}
@@ -498,48 +532,39 @@ function App() {
           ))}
         </motion.div>
 
-        <section className="bg-white rounded-xl shadow-lg mt-16 p-8">
+        <section className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-xl shadow-lg mt-16 p-8`}>
           <motion.div 
             className="grid grid-cols-1 md:grid-cols-3 gap-8"
             variants={staggerContainer}
             initial="initial"
             animate="animate"
           >
-            <motion.div 
-              className="text-center"
-              variants={fadeIn}
-            >
+            <motion.div className="text-center" variants={fadeIn}>
               <div className="flex justify-center mb-4">
                 <Package className="w-12 h-12 text-brand-500" />
               </div>
               <h3 className="text-xl font-semibold mb-2">الدفع عند الاستلام</h3>
-              <p className="text-gray-600">ادفع عند استلام طلبك</p>
+              <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>ادفع عند استلام طلبك</p>
             </motion.div>
-            <motion.div 
-              className="text-center"
-              variants={fadeIn}
-            >
+            <motion.div className="text-center" variants={fadeIn}>
               <div className="flex justify-center mb-4">
                 <Zap className="w-12 h-12 text-brand-500" />
               </div>
               <h3 className="text-xl font-semibold mb-2">توصيل خلال ٢٤ ساعة</h3>
-              <p className="text-gray-600">شحن سريع إلى باب منزلك</p>
+              <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>شحن سريع إلى باب منزلك</p>
             </motion.div>
-            <motion.div 
-              className="text-center"
-              variants={fadeIn}
-            >
+            <motion.div className="text-center" variants={fadeIn}>
               <div className="flex justify-center mb-4">
                 <Shield className="w-12 h-12 text-brand-500" />
               </div>
               <h3 className="text-xl font-semibold mb-2">موثوق وآمن</h3>
-              <p className="text-gray-600">بياناتك محمية دائمًا</p>
+              <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>بياناتك محمية دائمًا</p>
             </motion.div>
           </motion.div>
         </section>
       </main>
 
-      <footer className="bg-brand-600 text-white mt-16 py-12">
+      <footer className={`${isDarkMode ? 'bg-gray-800' : 'bg-brand-600'} text-white mt-16 py-12`}>
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
@@ -555,7 +580,7 @@ function App() {
               <h3 className="text-xl font-semibold mb-4">اتصل بنا</h3>
               <ul className="space-y-2">
                 <li>elamli.support@gmail.com</li>
-                <li>212640987767+</li>
+                <li>+212640987767</li>
                 <li>شارع الجزائر, تطوان</li>
               </ul>
             </div>
