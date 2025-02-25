@@ -86,9 +86,8 @@ function App() {
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [shareMessage, setShareMessage] = useState<string>('');
-  const [isDarkMode, setIsDarkMode] = useState(false); // حالة الوضع المظلم
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // جلب المنتجات
   useEffect(() => {
     async function fetchProducts() {
       try {
@@ -128,19 +127,16 @@ function App() {
     fetchProducts();
   }, []);
 
-  // تحديث الصورة المختارة
   useEffect(() => {
     if (selectedProduct) {
       setSelectedImage(selectedProduct.imageUrl);
     }
   }, [selectedProduct]);
 
-  // تصفية المنتجات بناءً على البحث
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // تبديل الوضع المظلم/الفاتح
   const toggleDarkMode = () => {
     setIsDarkMode(prev => !prev);
   };
@@ -220,13 +216,13 @@ function App() {
         await navigator.clipboard.writeText(productUrl);
         setShareMessage("تم نسخ رابط المنتج بنجاح!");
       } catch (err) {
-        setShareMessage("فشل في نسخ الرابط، حاول مرة أخرى.");
+        console.error("فشل في نسخ الرابط:", err);
+        setShareMessage(`فشل في النسخ تلقائيًا. انسخ الرابط يدويًا: ${productUrl}`);
       }
     }
-    setTimeout(() => setShareMessage(''), 3000);
+    setTimeout(() => setShareMessage(''), 5000);
   };
 
-  // كائن الأنماط الديناميكية بناءً على الوضع
   const themeClasses = isDarkMode
     ? 'bg-gray-900 text-white'
     : 'bg-gray-50 text-gray-900';
@@ -350,6 +346,14 @@ function App() {
                         exit={{ opacity: 0 }}
                       >
                         {shareMessage}
+                        {shareMessage.includes('انسخ الرابط يدويًا') && (
+                          <button 
+                            onClick={() => navigator.clipboard.writeText(`${window.location.origin}/?product=${selectedProduct.id}`).then(() => setShareMessage("تم النسخ يدويًا!"))}
+                            className="ml-2 underline text-blue-500"
+                          >
+                            نسخ الآن
+                          </button>
+                        )}
                       </motion.div>
                     )}
                     <motion.button
