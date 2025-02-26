@@ -75,10 +75,15 @@ function formatPrice(price: number | string): string {
 
 // آراء وهمية
 const mockReviews: Review[] = [
-  { id: "r1", productId: "prod1", customerName: "سارة", rating: 4, comment: "منتج رائع وأنيق، التوصيل كان سريعًا!", createdAt: "2025-02-24" },
-  { id: "r2", productId: "prod1", customerName: "نورا", rating: 5, comment: "جودة ممتازة، أحببت التصميم!", createdAt: "2025-02-23" },
-  { id: "r3", productId: "prod2", customerName: "ليلى", rating: 3, comment: "جيد ولكن السعر مرتفع قليلاً.", createdAt: "2025-02-22" },
-  { id: "r4", productId: "prod2", customerName: "فاطمة", rating: 4, comment: "مريح وعملي، أنصح به.", createdAt: "2025-02-21" },
+  { id: "r1", productId: "product%20one", customerName: "سارة", rating: 4, comment: "منتج رائع وأنيق، التوصيل كان سريعًا!", createdAt: "2025-02-24" },
+  { id: "r2", productId: "product%20one", customerName: "نورا", rating: 5, comment: "جودة ممتازة، أحببت التصميم!", createdAt: "2025-02-23" },
+  { id: "r3", productId: "product%20one", customerName: "ليلى", rating: 3, comment: "جيد ولكن السعر مرتفع قليلاً.", createdAt: "2025-02-22" },
+  
+  { id: "r4", productId: "product%20one", customerName: "فاطمة", rating: 4, comment: "مريح وعملي، أنصح به.", createdAt: "2025-02-21" },
+  { id: "r1", productId: "product_10", customerName: "سارة", rating: 4, comment: "منتج رائع وأنيق، التوصيل كان سريعًا!", createdAt: "2025-02-24" },
+  { id: "r2", productId: "product_10", customerName: "نورا", rating: 5, comment: "جودة ممتازة، أحببت التصميم!", createdAt: "2025-02-23" },
+  { id: "r3", productId: "product_10", customerName: "ليلى", rating: 3, comment: "جيد ولكن السعر مرتفع قليلاً.", createdAt: "2025-02-22" },
+  { id: "r4", productId: "product_10", customerName: "فاطمة", rating: 4, comment: "مريح وعملي، أنصح به.", createdAt: "2025-02-21" },
 ];
 
 function App() {
