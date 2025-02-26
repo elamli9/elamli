@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'; // لم نعد بحاجة إلى 'query' و 'where'
 import { ArrowRight, Package, Shield, Zap, Moon, Sun, Star } from 'lucide-react';
-import { Helmet } from 'react-helmet'; // نفترض أن react-helmet مثبت الآن
+import { Helmet } from 'react-helmet';
 
-// إعدادات Firebase
+// إعدادات Firebase (ما زلنا نحتاجها للمنتجات والطلبات)
 const firebaseConfig = {
   apiKey: "AIzaSyC3ENJExu01i7yODhQQO5k6-BuZ13737T4",
   authDomain: "elamli-shop.firebaseapp.com",
@@ -55,7 +55,7 @@ interface Review {
   customerName: string;
   rating: number;
   comment: string;
-  createdAt: any;
+  createdAt: string; // نستخدم string لأنها آراء وهمية
 }
 
 const fadeIn = {
@@ -72,6 +72,14 @@ function formatPrice(price: number | string): string {
   const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
   return !isNaN(numericPrice) ? numericPrice.toFixed(2) : '0.00';
 }
+
+// آراء وهمية
+const mockReviews: Review[] = [
+  { id: "r1", productId: "prod1", customerName: "سارة", rating: 4, comment: "منتج رائع وأنيق، التوصيل كان سريعًا!", createdAt: "2025-02-24" },
+  { id: "r2", productId: "prod1", customerName: "نورا", rating: 5, comment: "جودة ممتازة، أحببت التصميم!", createdAt: "2025-02-23" },
+  { id: "r3", productId: "prod2", customerName: "ليلى", rating: 3, comment: "جيد ولكن السعر مرتفع قليلاً.", createdAt: "2025-02-22" },
+  { id: "r4", productId: "prod2", customerName: "فاطمة", rating: 4, comment: "مريح وعملي، أنصح به.", createdAt: "2025-02-21" },
+];
 
 function App() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -133,29 +141,11 @@ function App() {
     fetchProducts();
   }, []);
 
+  // جلب الآراء الوهمية بناءً على المنتج المختار
   useEffect(() => {
     if (selectedProduct && selectedProduct.id) {
-      const fetchReviews = async () => {
-        try {
-          const reviewsQuery = query(
-            collection(db, "reviews"),
-            where("productId", "==", selectedProduct.id)
-          );
-          const querySnapshot = await getDocs(reviewsQuery);
-          const reviewsData = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            productId: doc.data().productId,
-            customerName: doc.data().customerName || 'عميل',
-            rating: doc.data().rating || 0,
-            comment: doc.data().comment || '',
-            createdAt: doc.data().createdAt
-          }));
-          setReviews(reviewsData);
-        } catch (err) {
-          console.error("خطأ في جلب الآراء:", err);
-        }
-      };
-      fetchReviews();
+      const productReviews = mockReviews.filter(review => review.productId === selectedProduct.id);
+      setReviews(productReviews);
       setSelectedImage(selectedProduct.imageUrl);
     } else {
       setReviews([]);
@@ -433,9 +423,7 @@ function App() {
                                   </div>
                                 </div>
                                 <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{review.comment}</p>
-                                <p className="text-sm text-gray-500 mt-1">
-                                  {review.createdAt?.toDate().toLocaleDateString('ar-EG')}
-                                </p>
+                                <p className="text-sm text-gray-500 mt-1">{new Date(review.createdAt).toLocaleDateString('ar-EG')}</p>
                               </div>
                             ))}
                           </div>
