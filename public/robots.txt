@@ -1,0 +1,3 @@
+User-agent: *
+Disallow: 
+Sitemap: https://elamli.shop/sitemap.xml
