@@ -79,14 +79,8 @@ const mockReviews: Review[] = [
   { id: "r2", productId: "product_10", customerName: "نورا", rating: 5, comment: "جودة ممتازة، أحببت التصميم!", createdAt: "2025-02-23" },
   { id: "r3", productId: "product_10", customerName: "ليلى", rating: 3, comment: "جيد ولكن السعر مرتفع قليلاً.", createdAt: "2025-02-22" },
   { id: "r4", productId: "product_10", customerName: "فاطمة", rating: 4, comment: "مريح وعملي، أنصح به.", createdAt: "2025-02-21" },
-  { id: "r5", productId: "product 2", customerName: "مريم", rating: 5, comment: "ساعة مذهلة بتصميم فاخر! أنصح بها بشدة.", createdAt: "2025-02-26" },
-  { id: "r6", productId: "product 2", customerName: "هند", rating: 4, comment: "جميلة وعملية، لكن أتمنى أن يكون السعر أقل.", createdAt: "2025-02-25" },
-  { id: "r7", productId: "product 2", customerName: "أمل", rating: 3, comment: "الخامة جيدة لكن التوصيل تأخر قليلاً.", createdAt: "2025-02-24" },
-  { id: "r8", productId: "product 2", customerName: "نادية", rating: 5, comment: "جودة عالية وسعر مناسب، تجربة رائعة!", createdAt: "2025-02-23" },
-  { id: "r5", productId: "product one", customerName: "مريم", rating: 5, comment: "ساعة مذهلة بتصميم فاخر! أنصح بها بشدة.", createdAt: "2025-02-26" },
-  { id: "r6", productId: "product one", customerName: "هند", rating: 4, comment: "جميلة وعملية، لكن أتمنى أن يكون السعر أقل.", createdAt: "2025-02-25" },
-  { id: "r7", productId: "product one", customerName: "أمل", rating: 3, comment: "الخامة جيدة لكن التوصيل تأخر قليلاً.", createdAt: "2025-02-24" },
-  { id: "r8", productId: "product one", customerName: "نادية", rating: 5, comment: "جودة عالية وسعر مناسب، تجربة رائعة!", createdAt: "2025-02-23" }
+  
+  
 ];
 
 
