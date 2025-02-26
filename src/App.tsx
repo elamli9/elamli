@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'; // لم نعد بحاجة إلى 'query' و 'where'
+import { getFirestore, collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { ArrowRight, Package, Shield, Zap, Moon, Sun, Star } from 'lucide-react';
 import { Helmet } from 'react-helmet';
 
-// إعدادات Firebase (ما زلنا نحتاجها للمنتجات والطلبات)
+// إعدادات Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyC3ENJExu01i7yODhQQO5k6-BuZ13737T4",
   authDomain: "elamli-shop.firebaseapp.com",
@@ -55,7 +55,7 @@ interface Review {
   customerName: string;
   rating: number;
   comment: string;
-  createdAt: string; // نستخدم string لأنها آراء وهمية
+  createdAt: string;
 }
 
 const fadeIn = {
@@ -75,11 +75,6 @@ function formatPrice(price: number | string): string {
 
 // آراء وهمية
 const mockReviews: Review[] = [
-  { id: "r1", productId: "product%20one", customerName: "سارة", rating: 4, comment: "منتج رائع وأنيق، التوصيل كان سريعًا!", createdAt: "2025-02-24" },
-  { id: "r2", productId: "product%20one", customerName: "نورا", rating: 5, comment: "جودة ممتازة، أحببت التصميم!", createdAt: "2025-02-23" },
-  { id: "r3", productId: "product%20one", customerName: "ليلى", rating: 3, comment: "جيد ولكن السعر مرتفع قليلاً.", createdAt: "2025-02-22" },
-  
-  { id: "r4", productId: "product%20one", customerName: "فاطمة", rating: 4, comment: "مريح وعملي، أنصح به.", createdAt: "2025-02-21" },
   { id: "r1", productId: "product_10", customerName: "سارة", rating: 4, comment: "منتج رائع وأنيق، التوصيل كان سريعًا!", createdAt: "2025-02-24" },
   { id: "r2", productId: "product_10", customerName: "نورا", rating: 5, comment: "جودة ممتازة، أحببت التصميم!", createdAt: "2025-02-23" },
   { id: "r3", productId: "product_10", customerName: "ليلى", rating: 3, comment: "جيد ولكن السعر مرتفع قليلاً.", createdAt: "2025-02-22" },
@@ -146,7 +141,6 @@ function App() {
     fetchProducts();
   }, []);
 
-  // جلب الآراء الوهمية بناءً على المنتج المختار
   useEffect(() => {
     if (selectedProduct && selectedProduct.id) {
       const productReviews = mockReviews.filter(review => review.productId === selectedProduct.id);
@@ -220,7 +214,7 @@ function App() {
   };
 
   const handleShareProduct = async (product: Product) => {
-    const productUrl = `https://yourdomain.shop/?product=${product.id}`; // استبدل بنطاقك
+    const productUrl = `https://elamli.shop/?product=${product.id}`; // استبدل بنطاقك
     const shareData = {
       title: product.name,
       text: `اطلع على هذا المنتج: ${product.name} - ${product.description}`,
@@ -312,7 +306,7 @@ function App() {
                       />
                       {selectedProduct.additionalImages && selectedProduct.additionalImages.length > 0 && (
                         <div className="grid grid-cols-4 gap-2">
-                          {selectedProduct.additionalImages.map((image, index) => (
+                          {[selectedProduct.imageUrl, ...(selectedProduct.additionalImages || [])].map((image, index) => (
                             <motion.img 
                               key={index}
                               src={image} 
