@@ -58,6 +58,13 @@ interface Review {
   createdAt: string;
 }
 
+interface Banner {
+  id: string;
+  imageUrl: string;
+  title?: string;
+  link?: string;
+}
+
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
@@ -79,17 +86,13 @@ const mockReviews: Review[] = [
   { id: "r2", productId: "product_10", customerName: "نورا", rating: 5, comment: "جودة ممتازة، أحببت التصميم!", createdAt: "2025-02-23" },
   { id: "r3", productId: "product_10", customerName: "ليلى", rating: 3, comment: "جيد ولكن السعر مرتفع قليلاً.", createdAt: "2025-02-22" },
   { id: "r4", productId: "product_10", customerName: "فاطمة", rating: 4, comment: "مريح وعملي، أنصح به.", createdAt: "2025-02-21" },
-  { id: "r5", productId: "product 2", customerName: "سارة", rating: 4, comment: "منتج رائع وأنيق، التوصيل كان سريعًا!", createdAt: "2025-02-24" },
-  { id: "r6", productId: "product 2", customerName: "نورا", rating: 5, comment: "جودة ممتازة، أحببت التصميم!", createdAt: "2025-02-23" },
-  { id: "r7", productId: "product 2", customerName: "ليلى", rating: 3, comment: "جيد ولكن السعر مرتفع قليلاً.", createdAt: "2025-02-22" },
-  { id: "r8", productId: "product 2", customerName: "فاطمة", rating: 4, comment: "مريح وعملي، أنصح به.", createdAt: "2025-02-21" },
-  
 ];
-
 
 function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -110,11 +113,13 @@ function App() {
     }
   }, []);
 
+  // جلب المنتجات والبنرات من Firebase
   useEffect(() => {
-    async function fetchProducts() {
+    async function fetchData() {
       try {
-        const querySnapshot = await getDocs(collection(db, "products"));
-        const productsData = querySnapshot.docs.map(doc => {
+        // جلب المنتجات
+        const productsSnapshot = await getDocs(collection(db, "products"));
+        const productsData = productsSnapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
@@ -128,6 +133,17 @@ function App() {
           };
         });
         setProducts(productsData);
+
+        // جلب البنرات
+        const bannersSnapshot = await getDocs(collection(db, "banners"));
+        const bannersData = bannersSnapshot.docs.map(doc => ({
+          id: doc.id,
+          imageUrl: doc.data().imageUrl || '',
+          title: doc.data().title || '',
+          link: doc.data().link || ''
+        }));
+        setBanners(bannersData);
+
         setLoading(false);
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -139,14 +155,27 @@ function App() {
           }
         }
       } catch (err) {
-        console.error("خطأ في جلب المنتجات:", err);
-        setError("فشل في تحميل المنتجات. يرجى المحاولة مرة أخرى لاحقًا.");
+        console.error("خطأ في جلب البيانات:", err);
+        setError("فشل في تحميل البيانات. يرجى المحاولة مرة أخرى لاحقًا.");
         setLoading(false);
       }
     }
-    fetchProducts();
+    fetchData();
   }, []);
 
+  // تغيير البنر تلقائيًا كل 3 ثوانٍ
+  useEffect(() => {
+    if (banners.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentBannerIndex((prevIndex) => 
+          prevIndex === banners.length - 1 ? 0 : prevIndex + 1
+        );
+      }, 3000); // تغيير كل 3 ثوانٍ
+      return () => clearInterval(interval); // تنظيف عند إلغاء التأثير
+    }
+  }, [banners]);
+
+  // جلب الآراء الوهمية
   useEffect(() => {
     if (selectedProduct && selectedProduct.id) {
       const productReviews = mockReviews.filter(review => review.productId === selectedProduct.id);
@@ -220,7 +249,7 @@ function App() {
   };
 
   const handleShareProduct = async (product: Product) => {
-    const productUrl = `https://elamli.shop/?product=${product.id}`; // استبدل بنطاقك
+    const productUrl = `https://yourdomain.shop/?product=${product.id}`; // استبدل بنطاقك
     const shareData = {
       title: product.name,
       text: `اطلع على هذا المنتج: ${product.name} - ${product.description}`,
@@ -547,6 +576,23 @@ function App() {
           </header>
 
           <main className="container mx-auto px-4 py-8">
+            {/* البانر الإعلاني */}
+            {banners.length > 0 && (
+              <motion.div 
+                className="w-full h-64 mb-8 rounded-lg overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                <img 
+                  src={banners[currentBannerIndex].imageUrl} 
+                  alt={banners[currentBannerIndex].title || 'عرض إعلاني'} 
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              </motion.div>
+            )}
+
             <motion.h1 
               className="text-3xl font-bold text-center text-brand-600 mb-12"
               initial={{ opacity: 0, y: -20 }}
