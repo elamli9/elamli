@@ -48,7 +48,6 @@ interface Order {
   createdAt: any;
 }
 
-// الرسوم المتحركة
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
@@ -56,14 +55,9 @@ const fadeIn = {
 };
 
 const staggerContainer = {
-  animate: {
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
+  animate: { transition: { staggerChildren: 0.1 } }
 };
 
-// تنسيق السعر
 function formatPrice(price: number | string): string {
   const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
   return !isNaN(numericPrice) ? numericPrice.toFixed(2) : '0.00';
@@ -77,17 +71,22 @@ function App() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [orderDetails, setOrderDetails] = useState<OrderDetails>({
-    fullName: '',
-    phone: '',
-    address: '',
-    city: '',
-    notes: ''
+    fullName: '', phone: '', address: '', city: '', notes: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [shareMessage, setShareMessage] = useState<string>('');
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  // تحميل الوضع المظلم من localStorage عند بدء التطبيق
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      setIsDarkMode(savedTheme === 'dark');
+    }
+  }, []);
+
+  // جلب المنتجات
   useEffect(() => {
     async function fetchProducts() {
       try {
@@ -105,7 +104,6 @@ function App() {
             specifications: Array.isArray(data.specifications) ? data.specifications : []
           };
         });
-
         setProducts(productsData);
         setLoading(false);
 
@@ -123,7 +121,6 @@ function App() {
         setLoading(false);
       }
     }
-
     fetchProducts();
   }, []);
 
@@ -137,8 +134,13 @@ function App() {
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // تبديل الوضع المظلم مع حفظ الحالة في localStorage
   const toggleDarkMode = () => {
-    setIsDarkMode(prev => !prev);
+    setIsDarkMode(prev => {
+      const newMode = !prev;
+      localStorage.setItem('theme', newMode ? 'dark' : 'light');
+      return newMode;
+    });
   };
 
   const handleProductClick = (product: Product) => {
@@ -146,13 +148,9 @@ function App() {
     setShowCheckout(false);
   };
 
-  const handleImageClick = (image: string) => {
-    setSelectedImage(image);
-  };
+  const handleImageClick = (image: string) => setSelectedImage(image);
 
-  const handleBuyNow = () => {
-    setShowCheckout(true);
-  };
+  const handleBuyNow = () => setShowCheckout(true);
 
   const handleOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,7 +175,6 @@ function App() {
         status: 'pending',
         createdAt: serverTimestamp()
       };
-
       await addDoc(collection(db, "orders"), order);
       alert('تم استلام طلبك بنجاح! سنتصل بك قريباً لتأكيد الطلب.');
       setOrderDetails({ fullName: '', phone: '', address: '', city: '', notes: '' });
@@ -197,7 +194,7 @@ function App() {
   };
 
   const handleShareProduct = async (product: Product) => {
-    const productUrl = `${window.location.origin}/?product=${product.id}`;
+    const productUrl = `https://www.elamli.shop/?product=${product.id}`; // استبدل yourdomain.shop بنطاقك
     const shareData = {
       title: product.name,
       text: `اطلع على هذا المنتج: ${product.name} - ${product.description}`,
@@ -223,13 +220,10 @@ function App() {
     setTimeout(() => setShareMessage(''), 5000);
   };
 
-  const themeClasses = isDarkMode
-    ? 'bg-gray-900 text-white'
-    : 'bg-gray-50 text-gray-900';
+  const themeClasses = isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900';
 
   if (selectedProduct) {
     const allImages = [selectedProduct.imageUrl, ...(selectedProduct.additionalImages || [])];
-
     return (
       <div className={`min-h-screen ${themeClasses}`}>
         <header className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
@@ -348,7 +342,7 @@ function App() {
                         {shareMessage}
                         {shareMessage.includes('انسخ الرابط يدويًا') && (
                           <button 
-                            onClick={() => navigator.clipboard.writeText(`${window.location.origin}/?product=${selectedProduct.id}`).then(() => setShareMessage("تم النسخ يدويًا!"))}
+                            onClick={() => navigator.clipboard.writeText(`https://yourdomain.shop/?product=${selectedProduct.id}`).then(() => setShareMessage("تم النسخ يدويًا!"))}
                             className="ml-2 underline text-blue-500"
                           >
                             نسخ الآن
@@ -471,11 +465,7 @@ function App() {
               whileTap={{ scale: 0.9 }}
               onClick={toggleDarkMode}
             >
-              {isDarkMode ? (
-                <Sun className="w-6 h-6 text-yellow-400" />
-              ) : (
-                <Moon className="w-6 h-6 text-gray-600" />
-              )}
+              {isDarkMode ? <Sun className="w-6 h-6 text-yellow-400" /> : <Moon className="w-6 h-6 text-gray-600" />}
             </motion.div>
           </div>
         </div>
