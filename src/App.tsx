@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ArrowRight, Package, Shield, Zap, Moon, Sun } from 'lucide-react';
-import { Helmet } from 'react-helmet';
+import { getFirestore, collection, getDocs, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { ArrowRight, Package, Shield, Zap, Moon, Sun, Star } from 'lucide-react';
+import { Helmet } from 'react-helmet'; // نفترض أن react-helmet مثبت الآن
 
 // إعدادات Firebase
 const firebaseConfig = {
@@ -49,6 +49,15 @@ interface Order {
   createdAt: any;
 }
 
+interface Review {
+  id: string;
+  productId: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  createdAt: any;
+}
+
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
@@ -66,6 +75,7 @@ function formatPrice(price: number | string): string {
 
 function App() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -79,7 +89,6 @@ function App() {
   const [shareMessage, setShareMessage] = useState<string>('');
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // تحميل الوضع المظلم من localStorage
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme) {
@@ -87,7 +96,6 @@ function App() {
     }
   }, []);
 
-  // جلب المنتجات
   useEffect(() => {
     async function fetchProducts() {
       try {
@@ -126,8 +134,31 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (selectedProduct) {
+    if (selectedProduct && selectedProduct.id) {
+      const fetchReviews = async () => {
+        try {
+          const reviewsQuery = query(
+            collection(db, "reviews"),
+            where("productId", "==", selectedProduct.id)
+          );
+          const querySnapshot = await getDocs(reviewsQuery);
+          const reviewsData = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            productId: doc.data().productId,
+            customerName: doc.data().customerName || 'عميل',
+            rating: doc.data().rating || 0,
+            comment: doc.data().comment || '',
+            createdAt: doc.data().createdAt
+          }));
+          setReviews(reviewsData);
+        } catch (err) {
+          console.error("خطأ في جلب الآراء:", err);
+        }
+      };
+      fetchReviews();
       setSelectedImage(selectedProduct.imageUrl);
+    } else {
+      setReviews([]);
     }
   }, [selectedProduct]);
 
@@ -225,18 +256,16 @@ function App() {
   return (
     <div className={`min-h-screen ${themeClasses}`}>
       <Helmet>
-        {/* البيانات الوصفية العامة للصفحة الرئيسية */}
         <title>ELAMLI - إكسسوارات وساعات نسائية أنيقة</title>
         <meta name="description" content="تسوقي أفضل الإكسسوارات والساعات النسائية الأنيقة من ELAMLI مع توصيل سريع خلال 24 ساعة والدفع عند الاستلام." />
         <meta name="keywords" content="إكسسوارات نسائية, ساعات أنيقة, تسوق عبر الإنترنت, ELAMLI, دفع عند الاستلام" />
         <meta name="robots" content="index, follow" />
         <meta property="og:title" content="ELAMLI - إكسسوارات وساعات نسائية" />
         <meta property="og:description" content="اكتشفي مجموعتنا الفريدة من الإكسسوارات والساعات النسائية الأنيقة مع توصيل سريع وآمن." />
-        <meta property="og:image" content="https://yourdomain.shop/og-image.jpg" /> {/* استبدل برابط صورة مميزة */}
+        <meta property="og:image" content="https://yourdomain.shop/og-image.jpg" />
         <meta property="og:url" content="https://yourdomain.shop" />
         <meta property="og:type" content="website" />
         <link rel="canonical" href="https://yourdomain.shop" />
-        {/* بيانات وصفية ديناميكية للمنتج المحدد */}
         {selectedProduct && (
           <>
             <title>{`${selectedProduct.name} - ELAMLI`}</title>
@@ -284,7 +313,7 @@ function App() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.3 }}
-                        loading="lazy" // تحسين الأداء
+                        loading="lazy"
                       />
                       {selectedProduct.additionalImages && selectedProduct.additionalImages.length > 0 && (
                         <div className="grid grid-cols-4 gap-2">
@@ -385,6 +414,35 @@ function App() {
                       >
                         اطلب الآن
                       </motion.button>
+
+                      <div className="mt-8">
+                        <h3 className="text-2xl font-semibold mb-4">آراء العملاء</h3>
+                        {reviews.length > 0 ? (
+                          <div className="space-y-4">
+                            {reviews.map(review => (
+                              <div key={review.id} className={`${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} p-4 rounded-lg`}>
+                                <div className="flex items-center mb-2">
+                                  <span className="font-semibold mr-2">{review.customerName}</span>
+                                  <div className="flex">
+                                    {Array.from({ length: 5 }, (_, i) => (
+                                      <Star 
+                                        key={i} 
+                                        className={`w-5 h-5 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-400'}`} 
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{review.comment}</p>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  {review.createdAt?.toDate().toLocaleDateString('ar-EG')}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>لا توجد آراء بعد لهذا المنتج.</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </motion.div>
